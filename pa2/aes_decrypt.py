@@ -1,9 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: iso-8859-15 -*-
 from Crypto.Cipher import AES;
 import sys;
 import re;
 import math;
+import binascii;
 
 key_cbc="140b41b22a29beb4061bda66b6747e14";
 key_ctr="36f18357be4dbd77f050515c73fcf9f2";
@@ -22,7 +23,7 @@ ctr_array=[ciphertext_ctr1, ciphertext_ctr2];
 
 def decrypt_cbc(ciphertext):
     ciphertext_array=[ciphertext[l:l+32] for l in range(0,len(ciphertext),32)];
-    cipher=AES.new(key_cbc.decode('hex'), AES.MODE_ECB); #the key is expected as byte string
+    cipher=AES.new(bytes.fromhex(key_cbc), AES.MODE_ECB); #the key is expected as byte string
     aux = "";
     for i in range(0,int(len(ciphertext)/32)-1): #for each block
         left_operand  = ciphertext_array[i]; #the first time here there is iv        
@@ -38,22 +39,22 @@ def decrypt_cbc(ciphertext):
 
 
 def decrypt_cbc_block(cipher,left_operand, right_operand):
-    right_string="".join( [chr(int(right_operand[l:l+2],16)) for l in range(0,len(right_operand),2)]);
-    right_decrypted =  cipher.decrypt(right_string).encode('hex');
-    block_decrypted = int(left_operand,16) ^ int(right_decrypted,16);
-    return re.sub('L','',hex(block_decrypted)[2:]);
+    right_string=bytes.fromhex(right_operand);
+    right_decrypted =  cipher.decrypt(right_string);
+    block_decrypted = int(left_operand,16) ^    int.from_bytes(right_decrypted,byteorder='big');
+    return hex(block_decrypted)[2:]; 
 
 cbc_decrypted=[decrypt_cbc(x) for x in cbc_array];
 
 
 def decrypt_ctr(ciphertext):
     iv=ciphertext[:32];
-    cipher=AES.new(key_ctr.decode('hex'),AES.MODE_ECB);
-    top=int(math.ceil(len(ciphertext)/32));
+    cipher=AES.new(bytes.fromhex(key_ctr),AES.MODE_ECB);
+    top=int(math.floor(len(ciphertext)/32));
     aux = "";
     for i in range(0,top):
-        iv_string="".join( [chr(int(iv[l:l+2], 16)) for l in range(0,len(iv),2)]);
-        iv_encrypted=cipher.encrypt(iv_string).encode('hex');
+        iv_string=bytes.fromhex(iv);
+        iv_encrypted=binascii.hexlify(cipher.encrypt(iv_string));
         block_size=min(32,len(ciphertext[(i+1)*32:])); #no padding, gotta verify how many bytes have remained 
         iv_encrypted_substr=iv_encrypted[0:block_size]; 
         mi_int=re.sub('L', '',hex(int(iv_encrypted_substr,16) ^  int(ciphertext[(i+1)*32:(i+1)*32+block_size],16))[2:]);
