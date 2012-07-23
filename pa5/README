@@ -1,0 +1,4 @@
+Requires gmp for multiprecision modular arithmetic and glib for a hashtable implementation
+to build:
+
+gcc dlog.c -Wall -lgmp  `pkg-config --cflags --libs glib-2.0`
